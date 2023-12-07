@@ -142,5 +142,5 @@ The function that maps confidence to distance is given by:
 $c = \frac{1}{1 + e^{s \cdot (d - 0.5)}}$, where $s$ is `sigmoid_steepness`, $c$ is the confidence and $d$ the distance.
 
 <p align="center">
- <img src="https://github.com/viam-labs/viam-face-identification/blob/main/img/sigmoid_plot.png" width=100%, height=100%>
+ <img src="https://github.com/viam-labs/viam-face-identification/blob/main/img/sigmoid_plot.png" width=50%, height=50%>
  </p>

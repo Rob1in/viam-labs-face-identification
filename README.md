@@ -110,6 +110,7 @@ The following attributes are available to configure your deepface module:
 | ` 'yolov8' `      | ` 'ArcFace' `     |
 | ` 'yunet' `       | ` 'Dlib' `        |
 | ` 'fastmtcnn' `   | ` 'SFace' `       |
+|                   | ` 'ir' `       |
 
 
 
@@ -127,6 +128,7 @@ The value assigned to `identification_threshold` if empty. For the source, see [
 | `'OpenFace'`    | 0.10              | 0.55               | 0.55                  |
 | `'DeepFace'`    | 0.23              | 64.0               | 0.64                  |
 | `'DeepID'`      | 0.015             | 45.0               | 0.17                  |
+| `'ir'`          | 0.5               | 1.0                | 1.0                   |
 
 #### Distance to confidence function 
 The function that maps confidence to distance is given by:

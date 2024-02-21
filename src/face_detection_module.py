@@ -60,7 +60,7 @@ class FaceIdentificationModule(Vision, Reconfigurable):
      # Validates JSON Configuration
     @classmethod
     def validate_config(cls, config: ServiceConfig) -> Sequence[str]:
-        detection_framework = config.attributes.fields["face_extractor_model"].string_value or 'ssd'
+        detection_framework = config.attributes.fields["face_extractor_model"].string_value or 'yunet'
         if detection_framework not in EXTRACTORS:
             raise Exception("face_extractor_model must be one of: '" + "', '".join(EXTRACTORS) + "'.")
         model_name = config.attributes.fields["face_embedding_model"].string_value or 'facenet'

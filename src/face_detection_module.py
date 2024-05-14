@@ -2,6 +2,7 @@ from typing import ClassVar, List, Mapping, Sequence, Any, Dict, Optional, Union
 from viam.media.video import CameraMimeType
 from typing_extensions import Self
 from viam.components.camera import Camera
+from viam.services.mlmodel import MLModel
 from viam.media.video import RawImage
 from viam.proto.service.vision import Classification, Detection
 from viam.services.vision import Vision
@@ -15,12 +16,16 @@ from viam.logging import getLogger
 from .identifier import Identifier
 from .utils import decode_image
 from PIL import Image
+import asyncio
 
 EXTRACTORS = ["mediapipe:0", "mediapipe:1", "yunet"]
 
 ENCODERS = ["sface", "facenet"]
 
 LOGGER = getLogger(__name__)
+
+
+PREFIX = "ML-MODEL-SERVICE:/"
 
 
 class FaceIdentificationModule(Vision, Reconfigurable):
@@ -59,16 +64,27 @@ class FaceIdentificationModule(Vision, Reconfigurable):
                 + "'."
             )
         camera_name = config.attributes.fields["camera_name"].string_value
+        camera_name = "cam"
+        ml_model_name = "mlmodel-1"
+        print(f"TROUVEE CAMERA NAME:  {camera_name}")
         if camera_name == "":
             raise Exception(
                 "A camera name is required for face_identification vision service module."
             )
-        return [camera_name]
+        return [camera_name, ml_model_name]
 
     def reconfigure(
         self, config: ServiceConfig, dependencies: Mapping[ResourceName, ResourceBase]
     ):
+        print("DEBUT RECONFIGURE..")
+        loop = asyncio.get_running_loop()
+        loop.create_task(self._reconfigure(config, dependencies))
+
+    async def _reconfigure(
+        self, config: ServiceConfig, dependencies: Mapping[ResourceName, ResourceBase]
+    ):
         self.camera_name = config.attributes.fields["camera_name"].string_value
+        self.camera_name = "cam"
         self.camera = dependencies[Camera.get_resource_name(self.camera_name)]
 
         def get_attribute_from_config(attribute_name: str, default, of_type=None):
@@ -106,12 +122,23 @@ class FaceIdentificationModule(Vision, Reconfigurable):
         align = get_attribute_from_config("align", True)
         model_name = get_attribute_from_config("face_embedding_model", "facenet")
         normalization = get_attribute_from_config("normalization", "base")
-        picture_directory = config.attributes.fields["picture_directory"].string_value
+        # picture_directory = config.attributes.fields["picture_directory"].string_value
+        picture_directory = "/Users/robinin/df_bm/viam-labs-face-identification/wedding"
         distance_metric_name = get_attribute_from_config("distance_metric", "cosine")
         identification_threshold = get_attribute_from_config(
             "identification_threshold", None, float
         )
         sigmoid_steepness = get_attribute_from_config("sigmoid_steepness", 10.0)
+        if model_name.startswith(PREFIX):
+            ml_model_service = MLModel.get_resource_name(model_name[len(PREFIX) :])
+        else:
+            ml_model_service = None
+
+        ml_model_service = dependencies[MLModel.get_resource_name("mlmodel-1")]
+        metadata = await ml_model_service.metadata()
+        print(f"LES METADATA SONT {metadata}")
+        print(f"TYPE OF ML MODEL SERVICE is {type(ml_model_service)} ")
+        print(f"LE ML MODEL {ml_model_service}")
         self.identifier = Identifier(
             detector_backend=detector_backend,
             extraction_threshold=extraction_threshold,
@@ -125,9 +152,10 @@ class FaceIdentificationModule(Vision, Reconfigurable):
             identification_threshold=identification_threshold,
             sigmoid_steepness=sigmoid_steepness,
             debug=False,
+            ml_model_service=ml_model_service,
         )
 
-        self.identifier.compute_known_embeddings()
+        await self.identifier.compute_known_embeddings()
         LOGGER.info(f" Found {len(self.identifier.known_embeddings)} labelled groups.")
 
     async def get_object_point_clouds(
@@ -148,7 +176,7 @@ class FaceIdentificationModule(Vision, Reconfigurable):
         timeout: float,
     ) -> List[Detection]:
         img = decode_image(image)
-        return self.identifier.get_detections(img)
+        return await self.identifier.get_detections(img)
 
     async def get_classifications(
         self,
@@ -176,10 +204,4 @@ class FaceIdentificationModule(Vision, Reconfigurable):
         timeout: Optional[float] = None,
         **kwargs,
     ):
-        if command["command"] == "recompute_embeddings":
-            self.identifier.known_embeddings = dict()
-            self.identifier.compute_known_embeddings()
-            LOGGER.info("Embeddings recomputed!")
-            return {"result": "Embeddings recomputed!"}
-        else:
-            raise NotImplementedError
+        raise NotImplementedError
